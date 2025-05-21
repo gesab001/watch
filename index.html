@@ -1,0 +1,316 @@
+<html>
+
+<body>
+
+<video id="video" width="320" height="240" controls>
+  <source src="Pulp.Fiction.1994.1080p.BrRip.x264.YIFY.mp4" type="video/mp4">
+  <source src="movie.ogg" type="video/ogg">
+    <track
+    label="English"
+    kind="subtitles"
+    srclang="en"
+    src="sub.vtt"
+    default />
+  Your browser does not support the video tag.
+</video>
+
+<div>
+<button onclick="turnOffFilter()">TURN OFF FILTER</button>
+<button onclick="turnOnFilter()">TURN ON FILTER</button>
+
+<p id="filterIsOnSwitch">FILTER IS OFF</p>
+</div>
+<div>
+<button onclick="markFirstSubtitle()">mark first subtitle</button>
+
+<span>FIRST SUBTITLE: </span> <span id="firstSubtitle"></span>
+
+<div>
+<button onclick="markFirstDialogue()">mark first dialogue</button>
+<span>FIRST DIALOGUE: </span> <span id="firstDialogue"></span>
+
+<button onclick="calculateSubtitleDialogueTimeDifference()">check time difference between subtitle and dialogue</button>
+
+<p id="subtitleDialogueTimeDifference"></p>
+
+
+<button onclick="adjustSubtitle()">ADJUST SUBTITLE</button>
+</div>
+</div>
+</body>
+
+<script>
+
+function processOriginalVtt(data){
+  console.log(data);
+  	   var items = splitByEmptyLines(data);
+	   console.log(items.length);
+	   console.log(items);
+	   const subtitles = [
+		  { startTime: 0, endTime: 5, text: "Hello, world!" },
+		  { startTime: 7, endTime: 12, text: "This is a test subtitle." },
+		  { startTime: 15, endTime: 20, text: "Another subtitle here." }
+		];
+	   for (var i=0; i<items.length; i++){
+		   var string = items[i];
+			   const linesArray = string.split(/\r?\n/);
+			   var timeFrame = getTimeFrame(linesArray);
+			   try{
+			    var startingTime = getStartingTime(timeFrame);
+			    var endingTime = getEndingTime(timeFrame);
+		       }catch (error){
+                    console.error("An error occurred:", error.message);
+			   }
+
+           	 
+	   }
+}
+function getOriginalVtt(){
+    var filename = "sub.vtt";
+         fetch(filename).then((response) => response.text()).then(processOriginalVtt);
+
+}
+function createVTT(subtitles) {
+  let vtt = "WEBVTT\n\n";
+  subtitles.forEach(subtitle => {
+    vtt += `${formatTime(subtitle.startTime)} --> ${formatTime(subtitle.endTime)}\n`;
+    vtt += `${subtitle.text}\n\n`;
+  });
+  return vtt;
+}
+
+function formatTime(time) {
+  const date = new Date(0, 0, 0, 0, 0, 0, time * 1000);
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  const milliseconds = date.getMilliseconds().toString().padStart(3, '0');
+  return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
+
+
+</script>
+<script>
+var badLanguageFilterIsOn = true;
+var aud = document.getElementById('video');
+const mutePoint = [];
+var badWords = [];
+
+function turnOffFilter(){
+  badLanguageFilterIsOn = false;
+  document.getElementById("filterIsOnSwitch").innerHTML = "FILTER IS OFF";
+}
+function turnOnFilter(){
+  badLanguageFilterIsOn = true;
+  document.getElementById("filterIsOnSwitch").innerHTML = "FILTER IS ON";
+}
+
+function markFirstSubtitle(){
+    const currentTime = getCurrentTime();
+	document.getElementById("firstSubtitle").innerHTML = currentTime;
+    	
+}
+
+function markFirstDialogue(){
+    const currentTime = getCurrentTime();
+	document.getElementById("firstDialogue").innerHTML = currentTime;
+    	
+}
+
+function calculateSubtitleDialogueTimeDifference(){
+   var firstSubtitle = parseInt(document.getElementById("firstSubtitle").innerHTML);
+   var firstDialogue = parseInt(document.getElementById("firstDialogue").innerHTML);
+   var difference = firstSubtitle - firstDialogue;
+   if (difference<0){
+      document.getElementById("subtitleDialogueTimeDifference").innerHTML = "subtitle is too early by " + Math.abs(difference);
+   }else{
+      document.getElementById("subtitleDialogueTimeDifference").innerHTML = "dialogue is too early by " + Math.abs(difference);   
+   }
+   
+   
+}
+
+function adjustSubtitle(){
+getOriginalVtt();
+			const subtitles = [
+		  { startTime: 0, endTime: 5, text: "Hello, world!" },
+		  { startTime: 7, endTime: 12, text: "This is a test subtitle." },
+		  { startTime: 15, endTime: 20, text: "Another subtitle here." }
+		];
+
+		const vttContent = createVTT(subtitles);
+		console.log(vttContent);
+
+		const blob = new Blob([vttContent], { type: 'text/vtt' });
+		const url = URL.createObjectURL(blob);
+
+		const track = document.createElement('track');
+		track.kind = 'subtitles';
+		track.label = 'English';
+		track.srclang = 'en';
+		track.src = url;
+		track.setAttribute('default', 'true');
+
+		//const video = document.querySelector('video');
+		aud.appendChild(track);
+		console.log("adjusted subs");
+		
+}
+
+function splitByEmptyLines(text) {
+  return text.split(/\n\s*\n/);
+}
+
+function checkIfStringContainsItemFromList(string) {
+
+  for (let i = 0; i < badWords.length; i++) {
+    var badword = list[i].toLowerCase();
+	console.log(badword);
+	console.log(string.toLowerCase());
+    if (string.toLowerCase().includes(badword)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function getTimeFrame(list){
+	const searchTerm = "-->";
+
+	const foundItem = list.find(item => item.includes(searchTerm));
+
+	if (foundItem) {
+	  // Item found, do something with it
+	  return foundItem;// Output: Found item: banana
+	} else {
+	  // Item not found
+	}
+}
+
+function getStartingTime(timeFrame){
+ 			   var timeFrameArray = timeFrame.split("-->");
+			   var time = timeFrameArray[0];
+			   var timeArray = time.split(",")[0].split(":");
+			   var hour = timeArray[0];
+			   var minute = timeArray[1];
+			   var second = timeArray[2];
+			   var timeInSeconds = parseInt(hour)*60*60 + parseInt(minute)*60 + parseInt(second) ;
+			   return timeInSeconds-1;
+}
+
+function getEndingTime(timeFrame){
+ 			   var timeFrameArray = timeFrame.split("-->");
+			   var time = timeFrameArray[1];
+			   var timeArray = time.split(",")[0].split(":");
+			   var hour = timeArray[0];
+			   var minute = timeArray[1];
+			   var second = timeArray[2];
+			   var timeInSeconds = parseInt(hour)*60*60 + parseInt(minute)*60 + parseInt(second);
+			   return timeInSeconds+1;
+}
+
+function checkIfStringContainsBadWord(string){
+    var isBad = false;
+    for (var x=0; x<badWords.length; x++){
+	    var badWord = badWords[x].toLowerCase();
+		if (string.toLowerCase().includes(badWord)){
+		  isBad = true;
+		  break;
+		}
+	}
+	return isBad;
+}
+function processSubtitles(data){
+	   var items = splitByEmptyLines(data);
+	   console.log(items.length);
+	   console.log(items);
+	   for (var i=0; i<items.length; i++){
+		   var string = items[i];
+		   if (checkIfStringContainsBadWord(string)){
+			   const linesArray = string.split(/\r?\n/);
+			   var timeFrame = getTimeFrame(linesArray);
+			   var startingTime = getStartingTime(timeFrame);
+			   var endingTime = getEndingTime(timeFrame);
+			   for (var x=startingTime; x<=endingTime; x++){
+			      mutePoint.push(x);
+			   }
+			   console.log(string);
+			   console.log("MUTE THIS");
+		
+
+           }		   
+	   }
+       aud.addEventListener("timeupdate", mute);
+	
+	
+}
+
+function getAlphabet() {
+  const alphabet = [];
+  for (let i = 97; i <= 122; i++) {
+    alphabet.push(String.fromCharCode(i));
+  }
+  return alphabet;
+}
+
+function unmaskBadWord(word){
+  const alphabetArray = getAlphabet();
+  var wordList = word.split("");
+  var badWord = "";
+  for (var x=0; x<wordList.length; x++){
+    var letter = wordList[x];
+    var letterindex = alphabetArray.indexOf(letter.toLowerCase());
+    var nextletterIndex = letterindex - 1;
+    var nextletter = alphabetArray[nextletterIndex];
+    badWord = badWord + nextletter;
+  }
+  
+  return badWord;
+}
+
+function processBadWords(data){
+  var cryptedBadWordsList = data["badwords"];
+  for (var x=0; x<cryptedBadWordsList.length; x++){
+     var cryptedWord = cryptedBadWordsList[x];
+	 var uncryptedWord = unmaskBadWord(cryptedWord);
+	 badWords.push(uncryptedWord);
+  }  
+  getSubtitles("Pulp.Fiction.1994.1080p.BrRip.x264.YIFY.srt");
+
+  
+}
+
+function getSubtitles(filename){
+    fetch(filename).then((response) => response.text()).then(processSubtitles);
+  
+}
+
+function getBadWords(filename){
+    fetch(filename).then((response) => response.json()).then(processBadWords);
+}
+
+getBadWords("badwords2.json");
+
+function getCurrentTime(){
+       const currentTime = Math.round(aud.currentTime);
+       return currentTime;
+}
+function mute(){
+    if (badLanguageFilterIsOn){
+		const currentTime = Math.round(aud.currentTime);
+
+		if (mutePoint.includes(currentTime)){
+				aud.muted = true;
+
+		}else{
+					aud.muted = false;
+
+		}
+	}
+  
+}
+
+ 
+</script>
+</html>
