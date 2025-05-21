@@ -5,12 +5,7 @@
 <video id="video" width="320" height="240" controls>
   <source src="Pulp.Fiction.1994.1080p.BrRip.x264.YIFY.mp4" type="video/mp4">
   <source src="movie.ogg" type="video/ogg">
-    <track
-    label="English"
-    kind="subtitles"
-    srclang="en"
-    src="sub.vtt"
-    default />
+
   Your browser does not support the video tag.
 </video>
 
@@ -43,27 +38,69 @@
 
 function processOriginalVtt(data){
   console.log(data);
+  					   var firstSubtitle = 14; //parseInt(document.getElementById("firstSubtitle").innerHTML);
+				   var firstDialogue = 31; //parseInt(document.getElementById("firstDialogue").innerHTML);
+				   var difference = firstSubtitle - firstDialogue; 
   	   var items = splitByEmptyLines(data);
-	   console.log(items.length);
-	   console.log(items);
-	   const subtitles = [
-		  { startTime: 0, endTime: 5, text: "Hello, world!" },
-		  { startTime: 7, endTime: 12, text: "This is a test subtitle." },
-		  { startTime: 15, endTime: 20, text: "Another subtitle here." }
-		];
-	   for (var i=0; i<items.length; i++){
+	   const subtitles = []; //{ startTime: 0, endTime: 5, text: "Hello, world!" }
+	   for (var i=1; i<items.length; i++){
 		   var string = items[i];
 			   const linesArray = string.split(/\r?\n/);
 			   var timeFrame = getTimeFrame(linesArray);
 			   try{
-			    var startingTime = getStartingTime(timeFrame);
-			    var endingTime = getEndingTime(timeFrame);
+
+					var startingTime = getStartingTimeVTT(timeFrame);
+					console.log(startingTime);
+					var endingTime = getEndingTimeVTT(timeFrame);
+					
+				   if (difference<0){
+					  console.log("subtitle is too early by " + Math.abs(difference));
+					  startingTime = startingTime + Math.abs(difference);
+					  					console.log(startingTime);
+
+					  endingTime = endingTime + Math.abs(difference);
+				   }else{
+					  console.log("dialogue is too late by " + Math.abs(difference));   
+					  
+				      startingTime = startingTime - Math.abs(difference);
+					  					console.log(startingTime);
+
+					  endingTime = endingTime - Math.abs(difference);
+				   }		    
+
+				var textArray = linesArray.slice(1, linesArray.length);
+				var text = "";
+				for (var textArrayItem=0; textArrayItem<textArray.length; textArrayItem++){
+				     var textArrayItemString = textArray[textArrayItem];
+					 text = text + textArrayItemString;
+				}
+				var jsonObject = { startTime: startingTime, endTime: endingTime, text: text };
+				subtitles.push(jsonObject);
+				console.log(jsonObject);
+
 		       }catch (error){
                     console.error("An error occurred:", error.message);
 			   }
 
            	 
 	   }
+	   
+	   		const vttContent = createVTT(subtitles);
+		console.log(vttContent);
+
+		const blob = new Blob([vttContent], { type: 'text/vtt' });
+		const url = URL.createObjectURL(blob);
+
+		const track = document.createElement('track');
+		track.kind = 'subtitles';
+		track.label = 'English';
+		track.srclang = 'en';
+		track.src = url;
+		track.setAttribute('default', 'true');
+
+		//const video = document.querySelector('video');
+		aud.appendChild(track);
+		console.log("adjusted subs");
 }
 function getOriginalVtt(){
     var filename = "sub.vtt";
@@ -131,6 +168,7 @@ function calculateSubtitleDialogueTimeDifference(){
    
 }
 
+
 function adjustSubtitle(){
 getOriginalVtt();
 			const subtitles = [
@@ -139,22 +177,7 @@ getOriginalVtt();
 		  { startTime: 15, endTime: 20, text: "Another subtitle here." }
 		];
 
-		const vttContent = createVTT(subtitles);
-		console.log(vttContent);
 
-		const blob = new Blob([vttContent], { type: 'text/vtt' });
-		const url = URL.createObjectURL(blob);
-
-		const track = document.createElement('track');
-		track.kind = 'subtitles';
-		track.label = 'English';
-		track.srclang = 'en';
-		track.src = url;
-		track.setAttribute('default', 'true');
-
-		//const video = document.querySelector('video');
-		aud.appendChild(track);
-		console.log("adjusted subs");
 		
 }
 
@@ -197,6 +220,46 @@ function getStartingTime(timeFrame){
 			   var second = timeArray[2];
 			   var timeInSeconds = parseInt(hour)*60*60 + parseInt(minute)*60 + parseInt(second) ;
 			   return timeInSeconds-1;
+}
+
+function getStartingTimeVTT(timeFrame){
+ 			   var timeFrameArray = timeFrame.split("-->");
+			   var time = timeFrameArray[0];
+			   var timeArray = time.split(".")[0].split(":");
+			   console.log(timeArray);	
+			   var result;
+			   if (timeArray.length==3){
+				   var hour = timeArray[0];
+				   var minute = timeArray[1];
+				   var second = timeArray[2];
+				   var timeInSeconds = parseInt(hour)*60*60 + parseInt(minute)*60 + parseInt(second) ;
+				   result = timeInSeconds;
+			   }else{
+				   var minute = timeArray[0];
+				   var second = timeArray[1];
+				   var timeInSeconds = parseInt(minute)*60 + parseInt(second);
+                   result = timeInSeconds;
+			   }
+			   return result;
+}
+function getEndingTimeVTT(timeFrame){
+ 			   var timeFrameArray = timeFrame.split("-->");
+			   var time = timeFrameArray[1];
+			   var timeArray = time.split(".")[0].split(":");
+			   var result;
+			   if (timeArray.length==3){
+				   var hour = timeArray[0];
+				   var minute = timeArray[1];
+				   var second = timeArray[2];
+				   var timeInSeconds = parseInt(hour)*60*60 + parseInt(minute)*60 + parseInt(second) ;
+				   result = timeInSeconds;
+			   }else{
+				   var minute = timeArray[0];
+				   var second = timeArray[1];
+				   var timeInSeconds = parseInt(minute)*60 + parseInt(second);
+                   result = timeInSeconds;
+			   }
+			   return result;
 }
 
 function getEndingTime(timeFrame){
